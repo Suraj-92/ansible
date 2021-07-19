@@ -1,0 +1,202 @@
+---
+- hosts: demo
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+          # - name: UPDATE
+          # become: true
+          # shell: sudo yum install -y epel-release
+
+          -  name: update
+             action: yum name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm state=installed
+
+
+          - name: Update
+            become: true
+            shell: sudo yum update -y
+
+          - name: Install nginx
+            become: yes
+            yum:
+                    name: nginx
+                    state: present
+
+          - name: start nginx
+            service:
+                    name: nginx
+                    state: started
+
+          - name: Copy Files to a remote machine
+            copy:
+                    src: /home/ansible/chatpapp.conf
+                    dest: /etc/nginx/conf.d/
+
+          - name: gunicorn service
+            copy:
+                    src: /home/ansible/gunicorn.service
+                    dest: /etc/systemd/system/
+
+          - name: daemon-reload
+            become: true
+            shell: sudo systemctl daemon-reload
+
+          - name: start gunicorn
+            copy:
+                    src: /home/ansible/gunicorn.service
+                    dest: /etc/systemd/system/
+
+          - name: daemon-reload
+            become: true
+            shell: sudo systemctl daemon-reload
+
+          - name: start gunicorn
+            become: true
+            shell: sudo systemctl start gunicorn
+
+          - name: enable gunicorn
+            become: true
+            shell: sudo systemctl enable gunicorn
+
+          - name: Start nginx
+            become: true
+            shell: sudo systemctl start nginx
+
+          - name: stop nginx
+            become: true
+            shell: sudo systemctl stop nginx
+
+          - name: start nginx
+            become: true
+            shell: sudo systemctl restart nginx
+
+
+
+# BAckend
+---
+- hosts: demo2
+  user: ansible
+  become: yes
+  connection: ssh
+
+  tasks:
+          #- name: update
+          #  action: yum name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm state=installed
+
+           - name: update
+             become: true
+             shell: sudo yum update -y
+
+           - name: Install mysql
+             yum:
+                     name: mysql-devel
+                     state: present
+             # action: yum name=mysql-devel state=present
+
+           - name: Install mysql
+             yum:
+                     name: mysql
+                     state: present
+             #action: yum name=mysql state=present
+
+
+                     #- name: Update
+                     #become: true
+                     #shell: sudo yum install -y https://dev.mysql.com/get/mysql57-community-release-el7-11.noarch.rpm
+
+             #- name: update
+             #become: true
+             #shell: sudo yum install -y mysql-community-client
+
+
+           - name: Install Git
+             yum:
+                     name: git
+                     state: present
+             #action: yum name=git state=present
+
+                     #- name: Git clone
+                     #git:
+                     #repo: https://github.com/kadamsagar039/new_chatapp.git
+                     #clone: yes
+                     #version: master
+                     #dest: /new_chatapp
+
+           - name: Install python3
+             yum:
+                     name: python3
+                     state: present
+
+                     #action: yum name=python3 state=present
+
+           - name: Install lib
+             yum:
+                     name: python3-devel
+                     state: present
+             #action: yum name=python3-devel state=present
+
+           - name: Install pip3
+             yum:
+                     name: python3-pip
+                     #          update-cache: yes
+                     state: present
+           - name: install python3-setuptools
+             yum:
+                     name: python3-setuptools
+                     state: present
+
+           # - name: Install python requirements
+           # pip:
+           #       executable: pip3.7
+           #         requirements: /new_chatapp/requirements.txt
+           #         state: present
+
+           - name: copy files
++-             copy:
+                     src: /home/ansible/django.service
+                     dest: /etc/systemd/system/
+
+           - name: command for daemon-reload
+             become: true
+             shell: sudo systemctl daemon-reload
+
+           - name: commad for start django
+             become: true
+             shell: sudo systemctl start django
+
+	   - name: command for enable django service
+             become: true
+             shell: sudo systemctl enable django
+
+
+chatpapp.conf
+server {
+  listen 80;
+  server_name _default;
+  location = /favicon.ico { access_log off; log_not_found off; }
+  location /static/ {
+      root /new_chatapp;
+  }
+  location / {
+      include proxy_params;
+      proxy_pass http://10.0.1.242:8004;
+  }
+}
+
+
+django.service
+[Unit]
+Description=django daemon
+After=network.target
+
+[Service]
+User=ansible
+#Group=www-data
+WorkingDirectory=/new_chatapp/fundoo
+
+ExecStart=/usr/bin/python3 /new_chatapp/fundoo/manage.py runserver 0.0.0.0:8004
+
+[Install]
+WantedBy=multi-user.target
+
